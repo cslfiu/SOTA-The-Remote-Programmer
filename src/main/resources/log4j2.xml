@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+<Properties>
+    <Property name="basePath">./log</Property>
+</Properties>
+
+<Appenders>
+    <RollingFile name="SOTALogger" fileName="${basePath}/sota-activity.log" filePattern="${basePath}/app-info-%d{yyyy-MM-dd}.log">
+        <PatternLayout>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+        </Policies>
+    </RollingFile>
+    <RollingFile name="SOTAErrorAppender" fileName="${basePath}/sota-errors.log" filePattern="${basePath}/sota-errors-%d{yyyy-MM-dd}.log">
+        <PatternLayout>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+        </Policies>
+    </RollingFile>
+    <RollingFile name="TCPActivityAppender" fileName="${basePath}/tcp-activity.log" filePattern="${basePath}/tcp-%d{yyyy-MM-dd}.log">
+        <PatternLayout>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+        </Policies>
+    </RollingFile>
+    <Console name="console" target="SYSTEM_OUT">
+        <PatternLayout   pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n" />
+    </Console>
+</Appenders>
+<Loggers>
+    <!--
+    <Logger name="com.howtodoinjava" level="debug" additivity="true">
+        <appender-ref ref="fileLogger" level="debug" />
+    </Logger>
+    !-->
+    <Logger name="TCPActivityLogger" level="TRACE" additivity="false">
+        <appender-ref ref="TCPActivityAppender" level="TRACE" />
+    </Logger>
+
+    <Logger name="SOTAErrorLogger" level="ERROR" additivity="false">
+        <appender-ref ref="SOTAErrorAppender" level="ERROR" />
+    </Logger>
+
+    <Logger name="ConsoleLogger" level="DEBUG" additivity="false">
+        <appender-ref ref="console" level="DEBUG"/>
+    </Logger>
+
+    <Root level="debug" additivity="false">
+        <appender-ref ref="SOTALogger" />
+    </Root>
+</Loggers>
+</Configuration>
