@@ -42,6 +42,7 @@ public class AtmelMicroController extends MicroController {
     public ProgrammingResult sendFirmware() {
         ProgrammingResult programmingResult = new ProgrammingResult();
         LoadFirmwareResult loadFirmwareResult = loadFirmware();
+        firmwareBytes = loadFirmwareResult.getData();
         if(loadFirmwareResult.isLoaded())
         {
             baseProgrammingProtocol.startFirmwareUploading(loadFirmwareResult.getData());

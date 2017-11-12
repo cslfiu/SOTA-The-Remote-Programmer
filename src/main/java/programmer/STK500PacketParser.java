@@ -68,6 +68,7 @@ public class STK500PacketParser
                 sequenceNumber = receivedPacket[a+1];
                 checksum ^= sequenceNumber;
                 size  = (receivedPacket[a+2] << 8) | ( receivedPacket[a+3]);
+                data = new byte[size];
                 checksum ^= receivedPacket[a+2];
                 checksum ^= receivedPacket[a+3];
 
@@ -84,10 +85,12 @@ return  false;
                     checksum ^= receivedPacket[a];
                 }
                 a++;
-                sequenceNumber = receivedPacket[a];
+                checksum = receivedPacket[a];
 
-                if(sequenceNumber == receivedPacket[a])
+                if(checksum == receivedPacket[a])
                 {
+
+
                     return true;
                 }
                 else

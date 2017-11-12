@@ -1,12 +1,19 @@
 package programmer;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import programmer.device.AtmelMicroController;
 import programmer.device.MicroController;
+import programmer.model.ProgrammerTaskResult;
 import programmer.security.AESCBCEncryption;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  * Created by Burak on 10/23/17.
@@ -18,6 +25,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     private AtmelMicroController atmelMicroController;
     private BaseConnection baseConnection;
     private ArrayList<byte[]> lastSentPackets;
+    private Logger sotaErrorAppender = LogManager.getLogger("SOTAErrorLogger");
 
 
 
@@ -75,7 +83,26 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     @Override
     public void startFirmwareUploading(byte[] firmware)
     {
-       TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(microController));
+        try {
+            while(!sendRebootCMD()){Thread.sleep(2000);};
+            startAuthenticationTask();
+        }
+        catch (Exception ex)
+        {
+            sotaErrorAppender.error("An Error occured in authenticatation part",ex);
+        }
+           Future<ProgrammerTaskResult> programmerTaskResultFuture = TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(microController));
+        try {
+            ProgrammerTaskResult programmerTaskResult = programmerTaskResultFuture.get();
+            System.out.println("Result = "+ programmerTaskResult.isSuccessed());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+
+
 
     }
 
@@ -137,6 +164,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     private boolean sendRebootCMD(){
         String message = "reboot\r\n";
         byte[] byteArray = message.getBytes();
+        baseConnection.sendDataToMicroController(byteArray);
         byte[] desiredInput  = {0x52,0x53,0x54,0x2b,0x49,0x4e,0x46,0x4f,0x52,0x4d,0x0d,0x0a};
         return Acknowledgement(desiredInput,false);
     }
@@ -195,7 +223,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         return Acknowledgement(stk500Protocol.GetCM_ENTER_PROGMODE_ISPAnswer(),true);
     }
 
-    private boolean CloseProgramMode()
+    public boolean CloseProgramMode()
     {
 
             byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_LEAVE_PROGMODE_ISP()).getData());
@@ -258,7 +286,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         return false;
     }
 
-    public boolean sendFirmware(byte[] firmware)
+    public boolean sendFirmware(byte[] firmware) throws InterruptedException
     {
         Integer topAddress = new Integer(-2147483648);
 
@@ -278,7 +306,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
             address[2] = (byte) Integer.parseInt(hexArray[2],16);
             address[3] = (byte) Integer.parseInt(hexArray[3],16);
 
-            while(LoadAddress(address)){};
+            while(!LoadAddress(address)){Thread.sleep(700);}
 
             byte[] firmwareChunk;
 
@@ -291,9 +319,16 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
                 firmwareChunk = new byte[firmware.length% microController.getMaximumFirmwareTransferPacketSize()];
             }
 
-            while (SendFirmwareChunk(firmwareChunk)){}
+            // firmware eklenmeli..
+
+            while (!SendFirmwareChunk(firmwareChunk)){Thread.sleep(700);}
 
         }
+
+//        while (!CloseProgramMode()) {
+//            Thread.sleep(1000);
+//        }
+
         return true;
 
     }
@@ -301,12 +336,12 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
     public boolean Acknowledgement(byte[] desiredInput, boolean isEncrypted) {
 
-        long timestart = System.currentTimeMillis();
         int index = 0;
         //todo time and tcp activity logger
         byte[] inputData = new byte[atmelMicroController.getMaximumPacketSize()];
 
         String desiredPacket = new String(desiredInput);
+        long timestart = System.currentTimeMillis();
         while((timestart + baseConnection.getTimeout()) > System.currentTimeMillis())
         {
             // System.out.println((timestart + Constants.TIMEOUT) +" - "+System.currentTimeMillis());
@@ -324,47 +359,21 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
                 else
                 {
                     if(inputData.length>2) {
-                        if (inputData[0] == 0x58) {
-                            int size = (((inputData[1] & 0xff) << 8) | (inputData[2] & 0xff));
-                            byte[] encryptedPortion = null;
-                            if (size == inputData.length - 3) {
-                               encryptedPortion = createSubByteArray(3, inputData);
-                            }
-                            String str="";
-//                            if(encryptedPortion != null)
 
-                            byte[] receivedData = ArrayUtils.toPrimitive(securityManager.decrypt(encryptedPortion).getData());
+                        ArrayList<Integer> occurances = findOccurence(inputData,(byte)0x58);
 
-                            STK500Protocol.PACKET_PARSER_STATE packet_parser_state = STK500Protocol.PACKET_PARSER_STATE.MESSAGE_START;
-
-
-                            for(int i=0; i< receivedData.length; i++)
-                            {
-                                /*
-                                  MESSAGE_START,
-                                  MESSAGE_SIZE,
-                                  TOKEN,
-                                  DATARECEIVING,
-                                  CHECKSUM
-
-                                 */
-                                STK500PacketParser stk500PacketParser = new STK500PacketParser(receivedData);
-                                if(stk500PacketParser.Parse())
+                        for(int occurenceIndex=0; occurenceIndex<occurances.size(); occurenceIndex++)
+                        {
+                                if(isHaveDesiredResponse(inputData, desiredInput, occurances.get(occurenceIndex)))
                                 {
-                                    byte[] data = stk500PacketParser.getData();
-                                    str = data.toString();
+                                    return true;
                                 }
-
-                            }
-
-                            if (str.indexOf(desiredPacket) >= 0) {
-                                stk500Protocol.IncreaseSequenceNumber();
-                                return true;
-                            }
-                        } else {
-                            //todo log
-                            // 12 57 e6 d6 5b bc 6e 73 4f 83 62 5f 68 46 79 0b 9f c0 4f 89 e7 83 57 75 4e a1 9f 2b
                         }
+
+                        return false;
+
+
+
                     }
                 }
         }
@@ -372,6 +381,58 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     }
 
 
+    private boolean isHaveDesiredResponse(byte[] receivedPacket, byte[] desiredInput, int startingIndex)
+    {
+        if(receivedPacket[startingIndex] == 0x58) {
+            int size = (((receivedPacket[startingIndex+1] & 0xff) << 8) | (receivedPacket[startingIndex+2] & 0xff));
+            startingIndex += 3;
+            byte[] encryptedPortion = null;
+            if(size>(receivedPacket.length-startingIndex))
+                return false;
+            encryptedPortion = new byte[size];
+            for (int packetFillerIndex = 0; packetFillerIndex < size; packetFillerIndex++) {
+                encryptedPortion[packetFillerIndex] = receivedPacket[startingIndex];
+                startingIndex++;
+            }
+
+
+            byte[] receivedData = ArrayUtils.toPrimitive(securityManager.decrypt(encryptedPortion).getData());
+
+
+
+            STK500PacketParser stk500PacketParser = new STK500PacketParser(receivedData);
+            if (stk500PacketParser.Parse()) {
+
+
+
+            if (Collections.indexOfSubList(Arrays.asList(ArrayUtils.toObject(stk500PacketParser.getData())), Arrays.asList(ArrayUtils.toObject(desiredInput))) >= 0) {
+                stk500Protocol.IncreaseSequenceNumber();
+                return true;
+            } else {
+                return false;
+            }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+            return false;
+
+    }
+
+    private ArrayList<Integer> findOccurence(byte[] packet, byte packetStart)
+    {
+        ArrayList<Integer> foundIndex = new ArrayList<>();
+        for(int i=0; i<packet.length; i++)
+        {
+            if(packet[i] == packetStart)
+                foundIndex.add(i);
+        }
+        return foundIndex;
+
+    }
 
 
     private byte[] createSubByteArray(int cutoffSize, byte[] array) {

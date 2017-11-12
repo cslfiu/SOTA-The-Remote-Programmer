@@ -23,6 +23,15 @@ public abstract class MicroController {
     protected byte[] authenticationToken;
     protected int authenticationNumber;
     protected int maximumFirmwareTransferPacketSize;
+
+    public byte[] getFirmwareBytes() {
+        return firmwareBytes;
+    }
+
+    public void setFirmwareBytes(byte[] firmwareBytes) {
+        this.firmwareBytes = firmwareBytes;
+    }
+
     protected byte[] firmwareBytes;
 
     public int getMaximumFirmwareTransferPacketSize() {

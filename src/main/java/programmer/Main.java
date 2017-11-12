@@ -26,11 +26,11 @@ public class Main {
 
 
 
-        AtmelMicroController atmelMicroController = new AtmelMicroController(SOTAGlobals.OTA_MODE.BASIC_CONFIDENTIALITY, SOTAGlobals.AUTH_MODE.OFF, Main.class.getResource("/paper_test.ino.hex").getPath());
+        AtmelMicroController atmelMicroController = new AtmelMicroController(SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY, SOTAGlobals.AUTH_MODE.ON, Main.class.getResource("/paper_test.ino.hex").getPath());
         atmelMicroController.setAuthenticated(false);
         byte[] authenticationToken = new byte[] {0x53, (byte)0xef, 0x34,0x23};
         Random random = new Random();
-        int authenticationNumber = random.nextInt();
+        int authenticationNumber = random.nextInt(16777215);
         atmelMicroController.setAuthenticationNumber(authenticationNumber);
         atmelMicroController.setAuthenticationToken(authenticationToken);
         WiFiConnection wiFiConnection = new WiFiConnection(atmelMicroController);

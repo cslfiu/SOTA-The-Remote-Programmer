@@ -14,8 +14,8 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
     private byte[] firmware;
     public SOTAFirmwareTransfer(MicroController microController)
     {
-        this.sotaProtocol = sotaProtocol;
-        this.firmware = firmware;
+        this.sotaProtocol = (SOTAProtocol)microController.getBaseProgrammingProtocol();
+        this.firmware = microController.getFirmwareBytes();
     }
 
 
@@ -28,17 +28,21 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
         boolean isChainBroke = false;
         while(true)
         {
-            sotaProtocol.startAuthenticationTask();
 
-            while(sotaProtocol.GetSync())
+            while(!sotaProtocol.GetSync())
             {
+                Thread.sleep(1000);
             }
 
-            while(sotaProtocol.EnableProgramMode())
+            while(!sotaProtocol.EnableProgramMode())
             {
+                Thread.sleep(1000);
             }
 
-            sotaProtocol.sendFirmware(firmware);
+            if(sotaProtocol.sendFirmware(firmware)) {
+
+            }
+
             break;
         }
 
