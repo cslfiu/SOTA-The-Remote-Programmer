@@ -34,7 +34,7 @@ public class WiFiConnection extends BaseConnection {
     public WiFiConnection(MicroController microController)
     {
         super(microController);
-        timeout = 4000;
+        timeout = 2000;
 
     }
 

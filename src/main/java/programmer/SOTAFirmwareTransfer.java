@@ -12,10 +12,12 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
 
     private SOTAProtocol sotaProtocol;
     private byte[] firmware;
+    private MicroController microController;
     public SOTAFirmwareTransfer(MicroController microController)
     {
         this.sotaProtocol = (SOTAProtocol)microController.getBaseProgrammingProtocol();
         this.firmware = microController.getFirmwareBytes();
+        this.microController = microController;
     }
 
 
@@ -26,27 +28,29 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
     public ProgrammerTaskResult call() throws Exception {
         ProgrammerTaskResult programmerTaskResult = new ProgrammerTaskResult();
         boolean isChainBroke = false;
-        while(true)
-        {
+        sotaProtocol.sendFirmware(firmware);
+//        while(true)
+//        {
+//
+//            while(!sotaProtocol.GetSync())
+//            {
+//                Thread.sleep(50);
+//            }
+//
+//            while(!sotaProtocol.EnableProgramMode())
+//            {
+//                Thread.sleep(50);
+//            }
+//
+//            if(sotaProtocol.sendFirmware(firmware)) {
+//                while(!sotaProtocol.CloseProgramMode()){Thread.sleep(50);}
+//                programmerTaskResult.setSuccessed(true);
+//            }
+//
+//            break;
+//        }
 
-            while(!sotaProtocol.GetSync())
-            {
-                Thread.sleep(1000);
-            }
 
-            while(!sotaProtocol.EnableProgramMode())
-            {
-                Thread.sleep(1000);
-            }
-
-            if(sotaProtocol.sendFirmware(firmware)) {
-
-            }
-
-            break;
-        }
-
-        programmerTaskResult.setSuccessed(true);
         return programmerTaskResult;
 
     }

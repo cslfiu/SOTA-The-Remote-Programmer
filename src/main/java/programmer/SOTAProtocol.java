@@ -70,7 +70,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
             {
                 while (!AuthenticateMicroController())
                 {
-                    Thread.sleep(500);
+                    Thread.sleep(50);
                 }
 
                 break;
@@ -84,8 +84,8 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     public void startFirmwareUploading(byte[] firmware)
     {
         try {
-            while(!sendRebootCMD()){Thread.sleep(2000);};
-            startAuthenticationTask();
+            while(!sendRebootCMD()){Thread.sleep(50);};
+//            startAuthenticationTask();
         }
         catch (Exception ex)
         {
@@ -135,7 +135,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         return Acknowledgement(stk500Protocol.AuthenticationAnswer(),true);
     }
 
-    private boolean SendFirmwareChunk(byte[] firmwareChunk)
+    public boolean SendFirmwareChunk(byte[] firmwareChunk)
     {
         byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_PROGRAM_FLASH_ISP(firmwareChunk)).getData());
 
@@ -288,41 +288,46 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
     public boolean sendFirmware(byte[] firmware) throws InterruptedException
     {
-        Integer topAddress = new Integer(-2147483648);
+        Integer topAddress = Integer.valueOf(-2147483648);
 
         int totalChunkNumber = firmware.length/microController.getMaximumFirmwareTransferPacketSize();
         if(firmware.length % microController.getMaximumFirmwareTransferPacketSize() != 0)
             totalChunkNumber++;
-        for(int i=0; i< totalChunkNumber; i++)
+        for(int i=0; i<totalChunkNumber; i++)
         {
             String loadedAddress = Integer.toBinaryString(topAddress);
             Long binaryFormattedAddress = Long.parseLong(loadedAddress, 2);
-            int parts = Long.toHexString(topAddress).length()/4;
+            int parts = Long.toHexString(binaryFormattedAddress).length()/4;
             byte[] address = new byte[4];
-            String[] hexArray = Long.toHexString(topAddress).split("(?<=\\G.{"+parts+"})");
+            String[] hexArray = Long.toHexString(binaryFormattedAddress).split("(?<=\\G.{"+parts+"})");
 
             address[0] = (byte) Integer.parseInt(hexArray[0],16);
             address[1] = (byte) Integer.parseInt(hexArray[1],16);
             address[2] = (byte) Integer.parseInt(hexArray[2],16);
             address[3] = (byte) Integer.parseInt(hexArray[3],16);
 
-            while(!LoadAddress(address)){Thread.sleep(700);}
+            while(!LoadAddress(address)){Thread.sleep(50);}
 
             byte[] firmwareChunk;
 
-            if(i != totalChunkNumber)
+            if(i != (totalChunkNumber-1))
             {
                 firmwareChunk = new byte[microController.getMaximumFirmwareTransferPacketSize()];
+
             }
             else
             {
                 firmwareChunk = new byte[firmware.length% microController.getMaximumFirmwareTransferPacketSize()];
             }
 
+            for(int index = 0; index < firmwareChunk.length; index++)
+            {
+                firmwareChunk[index] =  firmware[i*256+index];
+            }
             // firmware eklenmeli..
 
-            while (!SendFirmwareChunk(firmwareChunk)){Thread.sleep(700);}
-
+            while (!SendFirmwareChunk(firmwareChunk)){Thread.sleep(50);}
+            topAddress += 128;
         }
 
 //        while (!CloseProgramMode()) {
@@ -342,40 +347,35 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
         String desiredPacket = new String(desiredInput);
         long timestart = System.currentTimeMillis();
-        while((timestart + baseConnection.getTimeout()) > System.currentTimeMillis())
-        {
+        while((timestart + baseConnection.getTimeout()) > System.currentTimeMillis()) {
             // System.out.println((timestart + Constants.TIMEOUT) +" - "+System.currentTimeMillis());
             int b;
 
-                inputData = ArrayUtils.toPrimitive(baseConnection.getBytesFromMicroController().getReceivedData());
-                if(inputData == null || inputData.length == 0)
-                    return false;
-                if(!isEncrypted) {
-                    String str = new String(inputData);
-                    if (str.indexOf(desiredPacket) >= 0) {
-                        return true;
-                    }
+            inputData = ArrayUtils.toPrimitive(baseConnection.getBytesFromMicroController().getReceivedData());
+            if (inputData != null && inputData.length > 0)
+            {
+            if (!isEncrypted) {
+                String str = new String(inputData);
+                if (str.indexOf(desiredPacket) >= 0) {
+                    return true;
                 }
-                else
-                {
-                    if(inputData.length>2) {
+            } else {
+                if (inputData.length > 2) {
 
-                        ArrayList<Integer> occurances = findOccurence(inputData,(byte)0x58);
+                    ArrayList<Integer> occurances = findOccurence(inputData, (byte) 0x58);
 
-                        for(int occurenceIndex=0; occurenceIndex<occurances.size(); occurenceIndex++)
-                        {
-                                if(isHaveDesiredResponse(inputData, desiredInput, occurances.get(occurenceIndex)))
-                                {
-                                    return true;
-                                }
+                    for (int occurenceIndex = 0; occurenceIndex < occurances.size(); occurenceIndex++) {
+                        if (isHaveDesiredResponse(inputData, desiredInput, occurances.get(occurenceIndex))) {
+                            return true;
                         }
-
-                        return false;
-
-
-
                     }
+
+                    return false;
+
+
                 }
+            }
+        }
         }
         return false;
     }
