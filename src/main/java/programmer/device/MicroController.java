@@ -1,5 +1,7 @@
 package programmer.device;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import programmer.BaseConnection;
 import programmer.BaseProgrammingProtocol;
 import programmer.SOTAGlobals.AUTH_MODE;
@@ -23,6 +25,11 @@ public abstract class MicroController {
     protected byte[] authenticationToken;
     protected int authenticationNumber;
     protected int maximumFirmwareTransferPacketSize;
+    protected String deviceName;
+
+
+
+    protected Logger resultLogger = LogManager.getLogger(("SOTAResultLogger"));
 
     public byte[] getFirmwareBytes() {
         return firmwareBytes;
@@ -84,6 +91,14 @@ public abstract class MicroController {
 
     public void setBaseConnection(BaseConnection baseConnection) {
         this.baseConnection = baseConnection;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 
     public boolean isHasActiveConnection() {return hasActiveConnection;}

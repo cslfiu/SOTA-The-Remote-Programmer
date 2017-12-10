@@ -1,6 +1,9 @@
 package programmer;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import programmer.device.MicroController;
+import programmer.model.ProgrammingResult;
 
 import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
@@ -23,6 +26,12 @@ public class TCPServer {
     private AtomicBoolean isAnotherTaskRunning = new AtomicBoolean(false);
     private AtomicBoolean isProgrammingTaskFinished = new AtomicBoolean(false);
     private volatile boolean isActiveOperationOngoing = false;
+    private int finishedDevice=0;
+    private long programStartingTime;
+
+    private Logger sotaErrorAppender = LogManager.getLogger("SOTAErrorLogger");
+    private Logger resultLogger = LogManager.getLogger(("SOTAResultLogger"));
+
 
     public long getStartTime() {
         return startTime;
@@ -41,7 +50,8 @@ public class TCPServer {
     *
     */
 
-    public  TCPServer() {
+    public  TCPServer(long programStartingTime) {
+        this.programStartingTime = programStartingTime;
         deviceManager = DeviceManager.getInstance();
 
     }
@@ -60,35 +70,59 @@ public class TCPServer {
     }
 
     private void startServer() throws IOException {
+while(true) {
+
+    Socket clientConnection = socket.accept();
+    if (clientConnection.isConnected()) {
+
+        String remoteDeviceIpAdress = clientConnection.getRemoteSocketAddress().toString().replace("/", "").split(":")[0];
+        for (int i = 0; i < deviceManager.getMicroControllers().size(); i++) {
+            MicroController microController = deviceManager.getMicroControllers().get(i);
+            if (microController.getBaseConnection() instanceof WiFiConnection) {
+                if (remoteDeviceIpAdress.compareTo(((WiFiConnection) microController.getBaseConnection()).getIPAdress()) == 0) {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                System.out.println(" Device IP: " + remoteDeviceIpAdress);
+                                // todo I will might add extra checking mechnaism in here. e.g. device UUID check.
+                                WiFiConnection wiFiConnection = (WiFiConnection) microController.getBaseConnection();
+                                wiFiConnection.setBufferedInputStream(new BufferedInputStream(clientConnection.getInputStream()));
+                                wiFiConnection.setDataOutputStream(new DataOutputStream(clientConnection.getOutputStream()));
+                                microController.setHasActiveConnection(true);
+                                ProgrammingResult programmingResult =  microController.sendFirmware();
+                                if(programmingResult.isStatus() == true) {
 
 
-        Socket clientConnection = socket.accept();
-        if (clientConnection.isConnected()) {
+                                    resultLogger.trace(microController.getDeviceName() + " - OTA  took: " + (programmingResult.getDuration() + " ms"));
+                                    deviceManager.getMicroControllers().remove(microController);
+                                    finishedDevice++;
+                                }
+                                if(  deviceManager.getMicroControllers().size() == 0)
+                                {
+                                    resultLogger.trace(" Programming took: "+ (programStartingTime-System.currentTimeMillis()) + " ms");
 
-            String remoteDeviceIpAdress = clientConnection.getRemoteSocketAddress().toString().replace("/","").split(":")[0];
-            for(int i = 0; i<deviceManager.getMicroControllers().size(); i++) {
-                MicroController microController = deviceManager.getMicroControllers().get(i);
-                if (microController.getBaseConnection() instanceof WiFiConnection) {
-                    if (remoteDeviceIpAdress.compareTo(((WiFiConnection) microController.getBaseConnection()).getIPAdress()) == 0)
-                    {
-                        System.out.println("Burak");
-                        // todo I will might add extra checking mechnaism in here. e.g. device UUID check.
-                        WiFiConnection wiFiConnection = (WiFiConnection) microController.getBaseConnection();
-                        wiFiConnection.setBufferedInputStream(new BufferedInputStream(clientConnection.getInputStream()));
-                        wiFiConnection.setDataOutputStream(new DataOutputStream(clientConnection.getOutputStream()));
-                        microController.setHasActiveConnection(true);
-                        microController.sendFirmware();
-                    }
-                    else
-                    {
 
-                    }
+                                    return;
+                                }
+
+                            }
+                            catch (Exception ex)
+                            {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }).start();
+
+                } else {
 
                 }
-            }
-            }
 
+            }
+        }
+    }
 
+}
 
 //            BufferedInputStream bufferedInputStream = new BufferedInputStream((clientConnection.getInputStream()));
 //            DataOutputStream outToClient = new DataOutputStream((clientConnection.getOutputStream()));

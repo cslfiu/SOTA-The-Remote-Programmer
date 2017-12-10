@@ -1,5 +1,7 @@
 package programmer.device;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import programmer.SOTAGlobals.AUTH_MODE;
 import programmer.SOTAGlobals.OTA_MODE;
 import programmer.model.Line;
@@ -19,6 +21,7 @@ public class AtmelMicroController extends MicroController {
 
     private boolean isAuthenticated;
 
+    private Logger sotaErrorAppender = LogManager.getLogger("SOTAErrorLogger");
     public boolean isAuthenticated() {
         return isAuthenticated;
     }
@@ -30,6 +33,7 @@ public class AtmelMicroController extends MicroController {
     public AtmelMicroController(OTA_MODE ota_mode, AUTH_MODE authMode, String firmwarePath)
     {
         super(288,256);
+
         deviceId = UUID.randomUUID();
         this.authMode = authMode;
         this.otaMode = ota_mode;
@@ -41,20 +45,40 @@ public class AtmelMicroController extends MicroController {
     @Override
     public ProgrammingResult sendFirmware() {
         ProgrammingResult programmingResult = new ProgrammingResult();
-        LoadFirmwareResult loadFirmwareResult = loadFirmware();
-        firmwareBytes = loadFirmwareResult.getData();
-        if(loadFirmwareResult.isLoaded())
-        {
-            baseProgrammingProtocol.startFirmwareUploading(loadFirmwareResult.getData());
+
+        try {
+            long startingTime = System.currentTimeMillis();
+            LoadFirmwareResult loadFirmwareResult = loadFirmware();
+            firmwareBytes = loadFirmwareResult.getData();
+            if (loadFirmwareResult.isLoaded()) {
+                if(baseProgrammingProtocol.startFirmwareUploading(loadFirmwareResult.getData()))
+                {
+                    programmingResult.setStatus(true);
+                }
+                else
+                {
+                    programmingResult.setStatus(false);
+                }
+            }
+
+            long finish = System.currentTimeMillis();
+
+            programmingResult.setDuration(finish - startingTime);
+            programmingResult.setStatus(true);
+
         }
-
-
-
-        return null;
+        catch (Exception ex)
+        {
+            programmingResult.setStatus(false);
+            programmingResult.setDuration(-1);
+            sotaErrorAppender.error("Error occured during sending firmware : ",ex);
+        }
+        return programmingResult;
     }
 
     @Override
     public LoadFirmwareResult loadFirmware() {
+        long startingTime = System.currentTimeMillis();
         LoadFirmwareResult loadFirmwareResult = new LoadFirmwareResult();
 
         ArrayList<Line> sketchFileLine = new ArrayList<>();
@@ -77,12 +101,16 @@ public class AtmelMicroController extends MicroController {
                 firmwareArray[i] = (byte) firmwareCharArray[i];
             }
             loadFirmwareResult.setData(firmwareArray);
+            long finishingTime = System.currentTimeMillis();
+            loadFirmwareResult.setDuration(finishingTime - startingTime);
             loadFirmwareResult.setLoaded(true);
         }
         catch (Exception ex)
         {
-            ex.printStackTrace();
             loadFirmwareResult.setLoaded(false);
+            loadFirmwareResult.setDuration(-1);
+            sotaErrorAppender.error("Loading Firmware Failure: ",ex);
+
         }
         firmwareBytes = loadFirmwareResult.getData();
         return loadFirmwareResult;

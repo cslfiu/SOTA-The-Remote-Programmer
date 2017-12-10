@@ -26,6 +26,8 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     private BaseConnection baseConnection;
     private ArrayList<byte[]> lastSentPackets;
     private Logger sotaErrorAppender = LogManager.getLogger("SOTAErrorLogger");
+    private Logger resultLogger = LogManager.getLogger(("SOTAResultLogger"));
+    private int maximumAllowedTry = 10;
 
 
 
@@ -54,7 +56,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
         } catch (Exception ex)
         {
-
+            sotaErrorAppender.error("SOTA Protocol constructor: ",ex);
         }
 
 
@@ -68,11 +70,14 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         {
             case ON:
             {
+                long startingTime = System.currentTimeMillis();
                 while (!AuthenticateMicroController())
                 {
                     Thread.sleep(50);
                 }
+                long finishingTime = System.currentTimeMillis();
 
+                resultLogger.trace(atmelMicroController.getDeviceName()+" - Authentication Part took: "+ (finishingTime - startingTime) + " ms");
                 break;
             }
             case OFF:{
@@ -81,26 +86,41 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         }
     }
     @Override
-    public void startFirmwareUploading(byte[] firmware)
+    public boolean  startFirmwareUploading(byte[] firmware)
     {
+
         try {
-            while(!sendRebootCMD()){Thread.sleep(50);};
-//            startAuthenticationTask();
+            long startingTime = System.currentTimeMillis();
+            while (!sendRebootCMD()) {
+                Thread.sleep(50);
+            }
+            ;
+            long finishingTime = System.currentTimeMillis();
+            resultLogger.trace(atmelMicroController.getDeviceName() + " - Reboot Producure took: " + (finishingTime - startingTime) + " ms");
+
+            startAuthenticationTask();
+        } catch (Exception ex) {
+            sotaErrorAppender.error("An Error occured in authenticatation part", ex);
         }
-        catch (Exception ex)
-        {
-            sotaErrorAppender.error("An Error occured in authenticatation part",ex);
-        }
-           Future<ProgrammerTaskResult> programmerTaskResultFuture = TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(microController));
+        Future<ProgrammerTaskResult> programmerTaskResultFuture = TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(microController));
         try {
             ProgrammerTaskResult programmerTaskResult = programmerTaskResultFuture.get();
-            System.out.println("Result = "+ programmerTaskResult.isSuccessed());
+            if (programmerTaskResult.isSuccessed() == false) {
+                System.out.println("Result for " + atmelMicroController.getDeviceId() +" - "+atmelMicroController.getDeviceName()+" = " + programmerTaskResult.isSuccessed());
+                return false;
+            }
+            System.out.println("Result for " + atmelMicroController.getDeviceId() + " = " + programmerTaskResult.isSuccessed());
+        } catch (InterruptedException e) {
+            sotaErrorAppender.error(e);
+        } catch (ExecutionException e) {
+            sotaErrorAppender.error(e);
+        }
+        try {
+            Thread.sleep(500);
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
         }
-
+    return true;
 
 
 
@@ -325,8 +345,17 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
                 firmwareChunk[index] =  firmware[i*256+index];
             }
             // firmware eklenmeli..
+            int counter = 0;
 
-            while (!SendFirmwareChunk(firmwareChunk)){Thread.sleep(50);}
+            while (!SendFirmwareChunk(firmwareChunk)){
+                Thread.sleep(150);
+                counter++;
+                if(counter == maximumAllowedTry)
+                {
+                    return false;
+                }
+
+            }
             topAddress += 128;
         }
 

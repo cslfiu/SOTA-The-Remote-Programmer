@@ -12,7 +12,7 @@ import java.util.Random;
  */
 public class STK500Protocol {
 
-    private byte sequenceNumber = 0x01;
+    private byte sequenceNumber = 0x00;
     private Random random;
     private Logger wifiLogger = LogManager.getLogger("TCPActivityLogger");
     private MicroController microController;
@@ -47,7 +47,12 @@ public class STK500Protocol {
 
     public void IncreaseSequenceNumber()
     {
+        if(sequenceNumber == 0xFF)
+        {
+            sequenceNumber = 0x00;
+        }
         sequenceNumber++;
+
     }
 
     public byte GetSequenceNumber()

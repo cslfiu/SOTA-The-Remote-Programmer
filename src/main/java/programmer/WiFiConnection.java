@@ -20,7 +20,7 @@ public class WiFiConnection extends BaseConnection {
 
     private Logger wifiLogger = LogManager.getLogger("TCPActivityLogger");
     private Logger sotaErrorAppender = LogManager.getLogger("SOTAErrorLogger");
-    private Logger sotaLogger = LogManager.getRootLogger();
+
 
 
 
@@ -126,7 +126,7 @@ return null;
             stringArray[0] = IOUtils.toString(bufferedInputStream, StandardCharsets.UTF_8);
             dataGetResult.setReceivedData(stringArray);
         } catch (IOException e) {
-            e.printStackTrace();
+           wifiLogger.error("Getting String From Micro Controller Failure: ",e);
         }
         return dataGetResult;
     }

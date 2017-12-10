@@ -29,7 +29,7 @@ public abstract class BaseProgrammingProtocol {
         this.microController = microController;
     }
 
-    public abstract  void startFirmwareUploading(byte[] firmware);
+    public abstract  boolean startFirmwareUploading(byte[] firmware);
 
 
 }
