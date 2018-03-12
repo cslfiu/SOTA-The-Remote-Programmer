@@ -1,6 +1,6 @@
 package programmer;
 
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.DataGetResult;
 import programmer.model.DataSendResult;
 
@@ -11,7 +11,7 @@ public abstract class BaseConnection {
 
 
 
-    protected MicroController parentMicroController;
+    protected BaseMicroController parentBaseMicroController;
 
     public int getTimeout() {
         return timeout;
@@ -22,10 +22,11 @@ public abstract class BaseConnection {
     }
 
     protected int timeout;
-    public BaseConnection(MicroController microController){parentMicroController = microController;}
+    public BaseConnection(BaseMicroController baseMicroController){
+        parentBaseMicroController = baseMicroController;}
 
-    public MicroController getParentMicroController() {
-        return parentMicroController;
+    public BaseMicroController getParentBaseMicroController() {
+        return parentBaseMicroController;
     }
 
 

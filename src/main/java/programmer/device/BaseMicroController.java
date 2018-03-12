@@ -14,7 +14,7 @@ import java.util.UUID;
 /**
  * Created by Burak on 10/23/17.
  */
-public abstract class MicroController {
+public abstract class BaseMicroController {
     protected UUID deviceId;
     protected String firmwarePath;
     protected AUTH_MODE authMode;
@@ -110,7 +110,7 @@ public abstract class MicroController {
     public OTA_MODE getOtaMode(){return otaMode;}
     public String getDeviceId(){return deviceId.toString();}
 
-    public MicroController(int maximumPacketSize,int maximumFirmwareTransferPacketSize)
+    public BaseMicroController(int maximumPacketSize, int maximumFirmwareTransferPacketSize)
     {
         this.maximumPacketSize = maximumPacketSize;
         this.authenticationToken = new byte[4];

@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * Created by Burak on 10/23/17.
  */
-public class AtmelMicroController extends MicroController {
+public class AtmelMicroController extends BaseMicroController {
 
     private boolean isAuthenticated;
 
@@ -41,6 +41,9 @@ public class AtmelMicroController extends MicroController {
 
 
     }
+
+
+
 
     @Override
     public ProgrammingResult sendFirmware() {

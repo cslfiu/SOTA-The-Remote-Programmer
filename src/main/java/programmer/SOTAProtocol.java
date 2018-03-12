@@ -4,7 +4,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import programmer.device.AtmelMicroController;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.ProgrammerTaskResult;
 import programmer.security.AESCBCEncryption;
 
@@ -39,18 +39,18 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         this.stk500Protocol = stk500Protocol;
     }
 
-    public SOTAProtocol(MicroController microController) {
-        super(microController);
+    public SOTAProtocol(BaseMicroController baseMicroController) {
+        super(baseMicroController);
         try {
-            stk500Protocol = new STK500Protocol(microController);
-            if (microController instanceof AtmelMicroController) {
-                this.atmelMicroController = (AtmelMicroController) microController;
+            stk500Protocol = new STK500Protocol(baseMicroController);
+            if (baseMicroController instanceof AtmelMicroController) {
+                this.atmelMicroController = (AtmelMicroController) baseMicroController;
             } else {
                 throw new Exception("SOTA Protocol can only work with Atmel Micro-controllers.");
             }
 
             this.baseConnection = atmelMicroController.getBaseConnection();
-            setSecurityManager(new AESCBCEncryption(microController));
+            setSecurityManager(new AESCBCEncryption(baseMicroController));
 
 
 
@@ -102,7 +102,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         } catch (Exception ex) {
             sotaErrorAppender.error("An Error occured in authenticatation part", ex);
         }
-        Future<ProgrammerTaskResult> programmerTaskResultFuture = TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(microController));
+        Future<ProgrammerTaskResult> programmerTaskResultFuture = TaskManager.getInstance().addTask(new SOTAFirmwareTransfer(baseMicroController));
         try {
             ProgrammerTaskResult programmerTaskResult = programmerTaskResultFuture.get();
             if (programmerTaskResult.isSuccessed() == false) {
@@ -143,7 +143,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     {
         byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.Authenticate()).getData());
         baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -160,7 +160,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_PROGRAM_FLASH_ISP(firmwareChunk)).getData());
 
         baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -196,7 +196,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
         baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
 
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -214,7 +214,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_LOAD_ADDRESS(address)).getData());
 
         baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -231,7 +231,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
         byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_ENTER_PROGMODE_ISP()).getData());
 
         baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -249,7 +249,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
             byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.GetCMD_LEAVE_PROGMODE_ISP()).getData());
 
             baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(microController.getOtaMode())
+        switch(baseMicroController.getOtaMode())
         {
             case ECHO_INTEGRITY:{
                 if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
@@ -310,8 +310,8 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     {
         Integer topAddress = Integer.valueOf(-2147483648);
 
-        int totalChunkNumber = firmware.length/microController.getMaximumFirmwareTransferPacketSize();
-        if(firmware.length % microController.getMaximumFirmwareTransferPacketSize() != 0)
+        int totalChunkNumber = firmware.length/ baseMicroController.getMaximumFirmwareTransferPacketSize();
+        if(firmware.length % baseMicroController.getMaximumFirmwareTransferPacketSize() != 0)
             totalChunkNumber++;
         for(int i=0; i<totalChunkNumber; i++)
         {
@@ -332,12 +332,12 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
             if(i != (totalChunkNumber-1))
             {
-                firmwareChunk = new byte[microController.getMaximumFirmwareTransferPacketSize()];
+                firmwareChunk = new byte[baseMicroController.getMaximumFirmwareTransferPacketSize()];
 
             }
             else
             {
-                firmwareChunk = new byte[firmware.length% microController.getMaximumFirmwareTransferPacketSize()];
+                firmwareChunk = new byte[firmware.length% baseMicroController.getMaximumFirmwareTransferPacketSize()];
             }
 
             for(int index = 0; index < firmwareChunk.length; index++)

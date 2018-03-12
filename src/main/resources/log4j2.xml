@@ -13,6 +13,16 @@
             <TimeBasedTriggeringPolicy interval="1" modulate="true" />
         </Policies>
     </RollingFile>
+    <RollingFile name="SOTAResultAppender" fileName="${basePath}/sota-result.log" filePattern="${basePath}/sota-result-%d{yyyy-MM-dd}_%i.log">
+        <PatternLayout>
+            <pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            <SizeBasedTriggeringPolicy size="128 MB" />
+            <OnStartupTriggeringPolicy/>
+        </Policies>
+    </RollingFile>
     <RollingFile name="SOTAErrorAppender" fileName="${basePath}/sota-errors.log" filePattern="${basePath}/sota-errors-%d{yyyy-MM-dd}.log">
         <PatternLayout>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n</pattern>
@@ -39,9 +49,14 @@
         <appender-ref ref="fileLogger" level="debug" />
     </Logger>
     !-->
+    <Logger name="SOTAResultLogger" level="TRACE" additivity="false">
+        <appender-ref ref="SOTAResultAppender" level="TRACE" />
+    </Logger>
+
     <Logger name="TCPActivityLogger" level="TRACE" additivity="false">
         <appender-ref ref="TCPActivityAppender" level="TRACE" />
     </Logger>
+
 
     <Logger name="SOTAErrorLogger" level="ERROR" additivity="false">
         <appender-ref ref="SOTAErrorAppender" level="ERROR" />

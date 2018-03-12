@@ -1,6 +1,6 @@
 package programmer;
 
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 
 import java.util.ArrayList;
 
@@ -17,21 +17,21 @@ public class DeviceManager {
         return self;
     }
 
-    private ArrayList<MicroController> microControllers;
+    private ArrayList<BaseMicroController> baseMicroControllers;
 
     public DeviceManager()
     {
-        microControllers = new ArrayList<>();
+        baseMicroControllers = new ArrayList<>();
 
     }
 
-    public void addDevice(MicroController microController)
+    public void addDevice(BaseMicroController baseMicroController)
     {
-        microControllers.add(microController);
+        baseMicroControllers.add(baseMicroController);
     }
 
-    public ArrayList<MicroController> getMicroControllers() {
-        return microControllers;
+    public ArrayList<BaseMicroController> getBaseMicroControllers() {
+        return baseMicroControllers;
     }
 
 

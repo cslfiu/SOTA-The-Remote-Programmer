@@ -4,7 +4,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.DataGetResult;
 import programmer.model.DataSendResult;
 
@@ -31,9 +31,9 @@ public class WiFiConnection extends BaseConnection {
     private BufferedInputStream bufferedInputStream;
     private DataOutputStream dataOutputStream;
 
-    public WiFiConnection(MicroController microController)
+    public WiFiConnection(BaseMicroController baseMicroController)
     {
-        super(microController);
+        super(baseMicroController);
         timeout = 2000;
 
     }

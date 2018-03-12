@@ -2,7 +2,7 @@ package programmer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -15,7 +15,7 @@ public class STK500Protocol {
     private byte sequenceNumber = 0x00;
     private Random random;
     private Logger wifiLogger = LogManager.getLogger("TCPActivityLogger");
-    private MicroController microController;
+    private BaseMicroController baseMicroController;
     private int dataPacketSize;
 
     public int getCommandTimeout() {
@@ -37,11 +37,11 @@ public class STK500Protocol {
         CHECKSUM
     }
 
-    public STK500Protocol(MicroController microController)
+    public STK500Protocol(BaseMicroController baseMicroController)
     {
         this.commandTimeout = 500;
         this.dataPacketSize = 256;
-        this.microController = microController;
+        this.baseMicroController = baseMicroController;
     }
 
 
@@ -178,7 +178,7 @@ public class STK500Protocol {
     public byte[] Authenticate()
     {
         byte[] authenticationPacket = new byte[9];
-        byte[] intByteArray = ByteBuffer.allocate(4).putInt(microController.getAuthenticationNumber()).array();
+        byte[] intByteArray = ByteBuffer.allocate(4).putInt(baseMicroController.getAuthenticationNumber()).array();
         authenticationPacket[0] = 0x67;
         authenticationPacket[1] = intByteArray[0];
         authenticationPacket[2] = intByteArray[1];
@@ -186,10 +186,10 @@ public class STK500Protocol {
         authenticationPacket[4] = intByteArray[3];
 
         wifiLogger.info("Beklenen normal num = "+bytesToHex(intByteArray));
-        authenticationPacket[5] =  microController.getAuthenticationToken()[0];
-        authenticationPacket[6] =  microController.getAuthenticationToken()[1];
-        authenticationPacket[7] =  microController.getAuthenticationToken()[2];
-        authenticationPacket[8] =  microController.getAuthenticationToken()[3];
+        authenticationPacket[5] =  baseMicroController.getAuthenticationToken()[0];
+        authenticationPacket[6] =  baseMicroController.getAuthenticationToken()[1];
+        authenticationPacket[7] =  baseMicroController.getAuthenticationToken()[2];
+        authenticationPacket[8] =  baseMicroController.getAuthenticationToken()[3];
 
         return WrapWithMessageFormat(authenticationPacket);
     }
@@ -198,8 +198,8 @@ public class STK500Protocol {
     {
         byte[] authenticationResponsePacket = new byte[5];
         authenticationResponsePacket[0] = 0x00;
-        int authNum = microController.getAuthenticationNumber();
-        byte[] intByteArray = ByteBuffer.allocate(4).putInt(microController.getAuthenticationNumber()).array();
+        int authNum = baseMicroController.getAuthenticationNumber();
+        byte[] intByteArray = ByteBuffer.allocate(4).putInt(baseMicroController.getAuthenticationNumber()).array();
         byte lastByte = intByteArray[3];
         authNum += (int) lastByte<<24;
 

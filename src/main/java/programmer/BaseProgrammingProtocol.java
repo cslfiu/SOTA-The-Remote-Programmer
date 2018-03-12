@@ -1,6 +1,6 @@
 package programmer;
 
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.security.BaseSecurityManager;
 
 /**
@@ -8,7 +8,7 @@ import programmer.security.BaseSecurityManager;
  */
 public abstract class BaseProgrammingProtocol {
 
-    protected MicroController microController;
+    protected BaseMicroController baseMicroController;
 
     public BaseSecurityManager getSecurityManager() {
         return securityManager;
@@ -20,13 +20,13 @@ public abstract class BaseProgrammingProtocol {
     protected BaseSecurityManager securityManager;
 
 
-    public MicroController getMicroController() {
-        return microController;
+    public BaseMicroController getBaseMicroController() {
+        return baseMicroController;
     }
 
-    public BaseProgrammingProtocol(MicroController microController)
+    public BaseProgrammingProtocol(BaseMicroController baseMicroController)
     {
-        this.microController = microController;
+        this.baseMicroController = baseMicroController;
     }
 
     public abstract  boolean startFirmwareUploading(byte[] firmware);

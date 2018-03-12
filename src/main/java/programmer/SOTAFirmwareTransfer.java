@@ -2,7 +2,7 @@ package programmer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.ProgrammerTaskResult;
 
 import java.util.concurrent.Callable;
@@ -14,15 +14,15 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
 
     private SOTAProtocol sotaProtocol;
     private byte[] firmware;
-    private MicroController microController;
+    private BaseMicroController baseMicroController;
     private Logger resultLogger = LogManager.getLogger(("SOTAResultLogger"));
     private int maximumAllowedTry = 10;
 
-    public SOTAFirmwareTransfer(MicroController microController)
+    public SOTAFirmwareTransfer(BaseMicroController baseMicroController)
     {
-        this.sotaProtocol = (SOTAProtocol)microController.getBaseProgrammingProtocol();
-        this.firmware = microController.getFirmwareBytes();
-        this.microController = microController;
+        this.sotaProtocol = (SOTAProtocol) baseMicroController.getBaseProgrammingProtocol();
+        this.firmware = baseMicroController.getFirmwareBytes();
+        this.baseMicroController = baseMicroController;
     }
 
 
@@ -53,7 +53,7 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
                 }
             }
             finishTime = System.currentTimeMillis();
-            resultLogger.trace(microController.getDeviceName()+" - Sync Part took: "+ (finishTime - startingTime) + " ms");
+            resultLogger.trace(baseMicroController.getDeviceName()+" - Sync Part took: "+ (finishTime - startingTime) + " ms");
             startingTime = System.currentTimeMillis();
             counter = 0;
             while(!sotaProtocol.EnableProgramMode())
@@ -67,12 +67,12 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
                 }
             }
             finishTime = System.currentTimeMillis();
-            resultLogger.trace(microController.getDeviceName()+" - Enabling Programming Part took: "+ (finishTime - startingTime) + " ms");
+            resultLogger.trace(baseMicroController.getDeviceName()+" - Enabling Programming Part took: "+ (finishTime - startingTime) + " ms");
 
             startingTime = System.currentTimeMillis();
             if(sotaProtocol.sendFirmware(firmware)) {
                 finishTime = System.currentTimeMillis();
-                resultLogger.trace(microController.getDeviceName()+" - Sending Firmware Part took: "+ (finishTime - startingTime) + " ms");
+                resultLogger.trace(baseMicroController.getDeviceName()+" - Sending Firmware Part took: "+ (finishTime - startingTime) + " ms");
                 startingTime = System.currentTimeMillis();
                 counter = 0;
                 while(!sotaProtocol.CloseProgramMode()){Thread.sleep(100);
@@ -83,7 +83,7 @@ public class SOTAFirmwareTransfer implements Callable<ProgrammerTaskResult> {
                         return programmerTaskResult;
                     }}
                 finishTime = System.currentTimeMillis();
-                resultLogger.trace(microController.getDeviceName()+" - Closing Programming Part took: "+ (finishTime - startingTime) + " ms");
+                resultLogger.trace(baseMicroController.getDeviceName()+" - Closing Programming Part took: "+ (finishTime - startingTime) + " ms");
 
                 programmerTaskResult.setSuccessed(true);
             }

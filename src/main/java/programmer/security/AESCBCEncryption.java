@@ -2,7 +2,7 @@ package programmer.security;
 
 import org.apache.commons.lang3.ArrayUtils;
 import programmer.SOTAGlobals;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.DecryptedData;
 import programmer.model.EncryptedData;
 
@@ -25,15 +25,15 @@ public class AESCBCEncryption extends BaseSecurityManager {
     private byte[] secretKey = {0x2b, 0x7e, 0x15, 0x16, 0x28, (byte)0xae, (byte)0xd2, (byte)0xa6, (byte)0xab, (byte)0xf7, 0x15, (byte)0x88, 0x09, (byte)0xcf, 0x4f, 0x3c};
     private Cipher cipher = null;
     private SecretKey secretKeyObject;
-    private MicroController microController;
+    private BaseMicroController baseMicroController;
     private Random random;
 
 
-    public AESCBCEncryption(MicroController microController)
+    public AESCBCEncryption(BaseMicroController baseMicroController)
     {
         super();
 
-        this.microController = microController;
+        this.baseMicroController = baseMicroController;
         secretKeyObject = new SecretKeySpec(secretKey,"AES");
         random = new Random();
 
@@ -61,7 +61,7 @@ public class AESCBCEncryption extends BaseSecurityManager {
         byte[] plainText = new byte[newPacketSize];
 
         for(int index = 0; index < difference; index++) {
-            if(microController.getOtaMode() == SOTAGlobals.OTA_MODE.BASIC_CONFIDENTIALITY)
+            if(baseMicroController.getOtaMode() == SOTAGlobals.OTA_MODE.BASIC_CONFIDENTIALITY)
             plainText[(newPacketSize - 1) - index] = (byte) 0xff;
             else
                 plainText[(newPacketSize - 1) - index] = (byte) random.nextInt(256);

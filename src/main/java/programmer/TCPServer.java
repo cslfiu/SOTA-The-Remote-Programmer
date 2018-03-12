@@ -2,7 +2,7 @@ package programmer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import programmer.device.MicroController;
+import programmer.device.BaseMicroController;
 import programmer.model.ProgrammingResult;
 
 import java.io.BufferedInputStream;
@@ -45,11 +45,6 @@ public class TCPServer {
 
 
 
-    /*
-    *   Wh
-    *
-    */
-
     public  TCPServer(long programStartingTime) {
         this.programStartingTime = programStartingTime;
         deviceManager = DeviceManager.getInstance();
@@ -76,29 +71,29 @@ while(true) {
     if (clientConnection.isConnected()) {
 
         String remoteDeviceIpAdress = clientConnection.getRemoteSocketAddress().toString().replace("/", "").split(":")[0];
-        for (int i = 0; i < deviceManager.getMicroControllers().size(); i++) {
-            MicroController microController = deviceManager.getMicroControllers().get(i);
-            if (microController.getBaseConnection() instanceof WiFiConnection) {
-                if (remoteDeviceIpAdress.compareTo(((WiFiConnection) microController.getBaseConnection()).getIPAdress()) == 0) {
+        for (int i = 0; i < deviceManager.getBaseMicroControllers().size(); i++) {
+            BaseMicroController baseMicroController = deviceManager.getBaseMicroControllers().get(i);
+            if (baseMicroController.getBaseConnection() instanceof WiFiConnection) {
+                if (remoteDeviceIpAdress.compareTo(((WiFiConnection) baseMicroController.getBaseConnection()).getIPAdress()) == 0) {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             try {
                                 System.out.println(" Device IP: " + remoteDeviceIpAdress);
                                 // todo I will might add extra checking mechnaism in here. e.g. device UUID check.
-                                WiFiConnection wiFiConnection = (WiFiConnection) microController.getBaseConnection();
+                                WiFiConnection wiFiConnection = (WiFiConnection) baseMicroController.getBaseConnection();
                                 wiFiConnection.setBufferedInputStream(new BufferedInputStream(clientConnection.getInputStream()));
                                 wiFiConnection.setDataOutputStream(new DataOutputStream(clientConnection.getOutputStream()));
-                                microController.setHasActiveConnection(true);
-                                ProgrammingResult programmingResult =  microController.sendFirmware();
+                                baseMicroController.setHasActiveConnection(true);
+                                ProgrammingResult programmingResult =  baseMicroController.sendFirmware();
                                 if(programmingResult.isStatus() == true) {
 
 
-                                    resultLogger.trace(microController.getDeviceName() + " - OTA  took: " + (programmingResult.getDuration() + " ms"));
-                                    deviceManager.getMicroControllers().remove(microController);
+                                    resultLogger.trace(baseMicroController.getDeviceName() + " - OTA  took: " + (programmingResult.getDuration() + " ms"));
+                                    deviceManager.getBaseMicroControllers().remove(baseMicroController);
                                     finishedDevice++;
                                 }
-                                if(  deviceManager.getMicroControllers().size() == 0)
+                                if(  deviceManager.getBaseMicroControllers().size() == 0)
                                 {
                                     resultLogger.trace(" Programming took: "+ (programStartingTime-System.currentTimeMillis()) + " ms");
 
