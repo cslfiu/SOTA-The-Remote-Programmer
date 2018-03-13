@@ -28,14 +28,14 @@ If you want to add your IoT device as a target device, you need to register your
       main.addDevice("A427","10.109.189.0",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
     
 
-**The first argument **is name of target IoT device, it helps to identify devices easily from device list set.
+**The first argument ** is name of target IoT device, it helps to identify devices easily from device list set.
 **The second argument** is IP address of target device in string format.
 
-**The third argument,** *SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY* represents that the remote programmer encrypt over-the-air programming firmware packets to provide data integrity and confidentiality. Currently, The Remote Programmer supports only AES 128 Bit CBC symmetric encryption to provide data confidentiality also XOR based checksum is used for data integrity.
+**The third argument,** SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY* represents that the remote programmer encrypt over-the-air programming firmware packets to provide data integrity and confidentiality. Currently, The Remote Programmer supports only AES 128 Bit CBC symmetric encryption to provide data confidentiality also XOR based checksum is used for data integrity.
 
-**The fourth argument,** *SOTAGlobals.AUTH_MODE.ON* represents authentication module in The Remote Programmer enforces initiate authentication with micro-controller in IoT device. If user provides *SOTAGlobals.AUTH_MODE.OFF*, user will close authentication mechanism and entire over-the-air programming turns into vulnerable firmware update process.
+**The fourth argument,** SOTAGlobals.AUTH_MODE.ON* represents authentication module in The Remote Programmer enforces initiate authentication with micro-controller in IoT device. If user provides *SOTAGlobals.AUTH_MODE.OFF*, user will close authentication mechanism and entire over-the-air programming turns into vulnerable firmware update process.
 
-**The fifth argument **is a location of new firmware in string format.
+**The fifth argument** is a location of new firmware in string format.
 
 ## Built With
 
