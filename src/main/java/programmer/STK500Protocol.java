@@ -175,7 +175,7 @@ public class STK500Protocol {
        return receivingArray;
    }
 
-    public byte[] Authenticate()
+    public byte[] AuthenticateFirstPhaseRequest()
     {
         byte[] authenticationPacket = new byte[9];
         byte[] intByteArray = ByteBuffer.allocate(4).putInt(baseMicroController.getAuthenticationNumber()).array();
@@ -186,22 +186,54 @@ public class STK500Protocol {
         authenticationPacket[4] = intByteArray[3];
 
         wifiLogger.info("Beklenen normal num = "+bytesToHex(intByteArray));
-        authenticationPacket[5] =  baseMicroController.getAuthenticationToken()[0];
-        authenticationPacket[6] =  baseMicroController.getAuthenticationToken()[1];
-        authenticationPacket[7] =  baseMicroController.getAuthenticationToken()[2];
-        authenticationPacket[8] =  baseMicroController.getAuthenticationToken()[3];
+        authenticationPacket[5] =  baseMicroController.getAuthenticationPreSharedToken()[0];
+        authenticationPacket[6] =  baseMicroController.getAuthenticationPreSharedToken()[1];
+        authenticationPacket[7] =  baseMicroController.getAuthenticationPreSharedToken()[2];
+        authenticationPacket[8] =  baseMicroController.getAuthenticationPreSharedToken()[3];
 
         return WrapWithMessageFormat(authenticationPacket);
     }
 
-    public byte[] AuthenticationAnswer()
+    public byte[] AuthenticateSecondPhaseRequest(byte[] receivedRandomNumber)
+    {
+
+        int randomReceivedNumber = java.nio.ByteBuffer.wrap(receivedRandomNumber).getInt();
+        int secretKey = java.nio.ByteBuffer.wrap(baseMicroController.getGeneratedRandomNumber()).getInt();
+
+        randomReceivedNumber += secretKey;
+
+
+
+        byte[] authenticationPacket = new byte[5];
+        byte[] intByteArray = ByteBuffer.allocate(4).putInt(randomReceivedNumber).array();
+        authenticationPacket[0] = 0x68;
+
+        authenticationPacket[1] = intByteArray[0];
+        authenticationPacket[2] = intByteArray[1];
+        authenticationPacket[3] = intByteArray[2];
+        authenticationPacket[4] = intByteArray[3];
+
+        wifiLogger.info("Beklenen normal num = "+bytesToHex(intByteArray));
+        authenticationPacket[5] =  baseMicroController.getAuthenticationPreSharedToken()[0];
+        authenticationPacket[6] =  baseMicroController.getAuthenticationPreSharedToken()[1];
+        authenticationPacket[7] =  baseMicroController.getAuthenticationPreSharedToken()[2];
+        authenticationPacket[8] =  baseMicroController.getAuthenticationPreSharedToken()[3];
+
+        return WrapWithMessageFormat(authenticationPacket);
+    }
+
+    public byte[] AuthenticationAnswerFirstPhase()
     {
         byte[] authenticationResponsePacket = new byte[5];
         authenticationResponsePacket[0] = 0x00;
         int authNum = baseMicroController.getAuthenticationNumber();
-        byte[] intByteArray = ByteBuffer.allocate(4).putInt(baseMicroController.getAuthenticationNumber()).array();
-        byte lastByte = intByteArray[3];
-        authNum += (int) lastByte<<24;
+        int secretKey = java.nio.ByteBuffer.wrap(baseMicroController.getAuthenticationSecretKey()).getInt();
+
+        authNum += secretKey;
+
+//        byte[] intByteArray = ByteBuffer.allocate(4).putInt(baseMicroController.getAuthenticationNumber()).array();
+//        byte lastByte = intByteArray[3];
+//        authNum += (int) lastByte<<24;
 
 
         byte[]  incrementedNumber = ByteBuffer.allocate(4).putInt(authNum).array();
@@ -213,12 +245,23 @@ public class STK500Protocol {
         authenticationResponsePacket[4] = incrementedNumber[3];
 
 
+
+
         wifiLogger.info("Beklenen inc num = "+bytesToHex(incrementedNumber));
 
 
         return authenticationResponsePacket;
 
     }
+
+    public byte[] AuthenticationAnswerSecondPhase()
+    {
+        byte[] authenticationResponsePacket = new byte[1];
+        authenticationResponsePacket[0] = 0x00;
+        return authenticationResponsePacket;
+
+    }
+
 
     public byte[] GetCMD_PROGRAM_FLASH_ISP(byte[] firmwareChuck)
     {

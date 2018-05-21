@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import programmer.device.AtmelMicroController;
 import programmer.device.BaseMicroController;
+import programmer.model.PacketResponse;
 import programmer.model.ProgrammerTaskResult;
 import programmer.security.AESCBCEncryption;
 
@@ -141,19 +142,63 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
 
     private boolean AuthenticateMicroController()
     {
-        byte[] encryptedPacket = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.Authenticate()).getData());
-        baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacket));
-        switch(baseMicroController.getOtaMode())
+        byte[] encryptedPacketAuthenticationFirst = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.AuthenticateFirstPhaseRequest()).getData());
+        baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacketAuthenticationFirst));
+//        switch(baseMicroController.getOtaMode())
+//        {
+//            case ECHO_INTEGRITY:{
+//                if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacketAuthenticationFirst) == false)
+//                    return false;
+//                break;
+//            }
+////            case FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY_DOUBLE_AUTH_CHECK:
+////            {
+////                if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
+////                    return false;
+////                break;
+////            }
+//
+//
+//        }
+
+        PacketResponse packetResponse = isHaveDesiredResponse(retrieveDataFromTarget(true),stk500Protocol.AuthenticationAnswerFirstPhase(),false);
+
+        if(packetResponse.isHaveDesiredResponse() == true)
         {
-            case ECHO_INTEGRITY:{
-                if(PacketIntegrityCheck(SOTAGlobals.OTA_MODE.ECHO_INTEGRITY,encryptedPacket) == false)
-                    return false;
-                break;
+            // Now it's turn to pass second phase
+            byte[] microcontrollerGeneratedNumber = new byte[4];
+            microcontrollerGeneratedNumber[0] = packetResponse.getPacket()[packetResponse.getStartingIndexOfAnswer()+5];
+            microcontrollerGeneratedNumber[1] = packetResponse.getPacket()[packetResponse.getStartingIndexOfAnswer()+6];
+            microcontrollerGeneratedNumber[2] = packetResponse.getPacket()[packetResponse.getStartingIndexOfAnswer()+7];
+            microcontrollerGeneratedNumber[3] = packetResponse.getPacket()[packetResponse.getStartingIndexOfAnswer()+8];
+            baseMicroController.setGeneratedRandomNumber(microcontrollerGeneratedNumber);
+            byte[] encryptedPacketAuthenticationSecind = ArrayUtils.toPrimitive(securityManager.encrypt(stk500Protocol.AuthenticateSecondPhaseRequest(baseMicroController.getGeneratedRandomNumber())).getData());
+            baseConnection.sendDataToMicroController(WrapWithMessageFormat(encryptedPacketAuthenticationSecind));
+
+            PacketResponse packetResponseFromSecondPhase = isHaveDesiredResponse(retrieveDataFromTarget(true),stk500Protocol.AuthenticationAnswerSecondPhase(),false);
+            if(packetResponseFromSecondPhase.isHaveDesiredResponse() == true)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
 
+
+
+
+
         }
-        return Acknowledgement(stk500Protocol.AuthenticationAnswer(),true);
+        else
+        {
+            return false;
+        }
+
+//        return Acknowledgement(stk500Protocol.AuthenticationAnswer(),true);
     }
+
+
 
     public boolean SendFirmwareChunk(byte[] firmwareChunk)
     {
@@ -177,6 +222,7 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
             }
 
         }
+
         return Acknowledgement(stk500Protocol.GetCMD_PROGRAM_FLASH_ISPAnswer(),true);
 
     }
@@ -368,13 +414,14 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
     }
 
 
-    public boolean Acknowledgement(byte[] desiredInput, boolean isEncrypted) {
-
+    public ArrayList<byte[]> retrieveDataFromTarget(boolean isEncrypted)
+    {
+        ArrayList<byte[]> returnedValue = new ArrayList<>();
         int index = 0;
         //todo time and tcp activity logger
         byte[] inputData = new byte[atmelMicroController.getMaximumPacketSize()];
 
-        String desiredPacket = new String(desiredInput);
+//        String desiredPacket = new String(desiredInput);
         long timestart = System.currentTimeMillis();
         while((timestart + baseConnection.getTimeout()) > System.currentTimeMillis()) {
             // System.out.println((timestart + Constants.TIMEOUT) +" - "+System.currentTimeMillis());
@@ -383,73 +430,103 @@ public class SOTAProtocol extends BaseProgrammingProtocol {
             inputData = ArrayUtils.toPrimitive(baseConnection.getBytesFromMicroController().getReceivedData());
             if (inputData != null && inputData.length > 0)
             {
-            if (!isEncrypted) {
-                String str = new String(inputData);
-                if (str.indexOf(desiredPacket) >= 0) {
-                    return true;
-                }
-            } else {
-                if (inputData.length > 2) {
+                if (!isEncrypted) {
+                    returnedValue.add(inputData);
+                } else {
+                    if (inputData.length > 2) {
 
-                    ArrayList<Integer> occurances = findOccurence(inputData, (byte) 0x58);
+                        ArrayList<Integer> occurances = findOccurence(inputData, (byte) 0x58);
+                        int receivedPacketIndex = -1;
+                        for (int occurenceIndex = 0; occurenceIndex < occurances.size(); occurenceIndex++) {
+                            receivedPacketIndex = occurances.get(occurenceIndex);
+                            if(receivedPacketIndex >= 0){
 
-                    for (int occurenceIndex = 0; occurenceIndex < occurances.size(); occurenceIndex++) {
-                        if (isHaveDesiredResponse(inputData, desiredInput, occurances.get(occurenceIndex))) {
-                            return true;
+                                if(inputData[receivedPacketIndex] == 0x58) {
+                                    int size = (((inputData[receivedPacketIndex+1] & 0xff) << 8) | (inputData[receivedPacketIndex+2] & 0xff));
+                                    receivedPacketIndex += 3;
+                                    byte[] encryptedPortion = null;
+                                    if(size<=(inputData.length-receivedPacketIndex))
+                                    {
+                                        encryptedPortion = new byte[size];
+                                        for (int packetFillerIndex = 0; packetFillerIndex < size; packetFillerIndex++) {
+                                            encryptedPortion[packetFillerIndex] = inputData[receivedPacketIndex];
+                                            receivedPacketIndex++;
+                                        }
+                                        byte[] receivedData = ArrayUtils.toPrimitive(securityManager.decrypt(encryptedPortion).getData());
+                                        returnedValue.add(receivedData);
+                                    }
+                                    }
+
+
+                            }
                         }
                     }
-
-                    return false;
-
-
                 }
             }
         }
-        }
-        return false;
+        return returnedValue;
     }
 
 
-    private boolean isHaveDesiredResponse(byte[] receivedPacket, byte[] desiredInput, int startingIndex)
-    {
-        if(receivedPacket[startingIndex] == 0x58) {
-            int size = (((receivedPacket[startingIndex+1] & 0xff) << 8) | (receivedPacket[startingIndex+2] & 0xff));
-            startingIndex += 3;
-            byte[] encryptedPortion = null;
-            if(size>(receivedPacket.length-startingIndex))
-                return false;
-            encryptedPortion = new byte[size];
-            for (int packetFillerIndex = 0; packetFillerIndex < size; packetFillerIndex++) {
-                encryptedPortion[packetFillerIndex] = receivedPacket[startingIndex];
-                startingIndex++;
-            }
+
+    public boolean Acknowledgement(byte[] desiredInput, boolean isEncrypted) {
+
+        //todo time and tcp activity logger
+
+        String desiredPacket = new String(desiredInput);
+
+        ArrayList<byte[]> receivedPackets = retrieveDataFromTarget(isEncrypted);
+if(receivedPackets.size() == 0) return false;
+            return isHaveDesiredResponse(receivedPackets, desiredInput,!isEncrypted).isHaveDesiredResponse();
+    }
 
 
-            byte[] receivedData = ArrayUtils.toPrimitive(securityManager.decrypt(encryptedPortion).getData());
-
-
-
-            STK500PacketParser stk500PacketParser = new STK500PacketParser(receivedData);
-            if (stk500PacketParser.Parse()) {
-
-
-
-            if (Collections.indexOfSubList(Arrays.asList(ArrayUtils.toObject(stk500PacketParser.getData())), Arrays.asList(ArrayUtils.toObject(desiredInput))) >= 0) {
-                stk500Protocol.IncreaseSequenceNumber();
-                return true;
-            } else {
-                return false;
-            }
-            }
-            else
+    private PacketResponse isHaveDesiredResponse(ArrayList<byte[]> receivedPackets, byte[] desiredInput,boolean isPlainText) {
+        PacketResponse packetResponse = new PacketResponse();
+        packetResponse.setHaveDesiredResponse(false);
+        for(byte[] receivedPacket: receivedPackets) {
+            if(isPlainText)
             {
-                return false;
-            }
-        }
-        else
-            return false;
+                String str = new String(receivedPacket);
+                String desiredPacket = new String(desiredInput);
 
+                if (str.indexOf(desiredPacket) >= 0) {
+
+                    packetResponse = new PacketResponse();
+                    stk500Protocol.IncreaseSequenceNumber();
+                    packetResponse.setPacket(desiredInput);
+                    packetResponse.setStartingIndexOfAnswer(0);
+                    packetResponse.setHaveDesiredResponse(true);
+                    return packetResponse;
+
+                }
+            }
+            else {
+                STK500PacketParser stk500PacketParser = new STK500PacketParser(receivedPacket);
+                if (stk500PacketParser.Parse()) {
+
+                    int desiredPacketIndex = Collections.indexOfSubList(Arrays.asList(ArrayUtils.toObject(stk500PacketParser.getData())), Arrays.asList(ArrayUtils.toObject(desiredInput)));
+
+                    if (desiredPacketIndex >= 0) {
+                        packetResponse = new PacketResponse();
+                        stk500Protocol.IncreaseSequenceNumber();
+                        packetResponse.setPacket(stk500PacketParser.getData());
+                        packetResponse.setStartingIndexOfAnswer(desiredPacketIndex);
+                        packetResponse.setHaveDesiredResponse(true);
+                        return packetResponse;
+                    } else {
+                        return packetResponse;
+                    }
+                } else {
+                    return packetResponse;
+                }
+            }
+
+        }
+return packetResponse;
     }
+
+
 
     private ArrayList<Integer> findOccurence(byte[] packet, byte packetStart)
     {

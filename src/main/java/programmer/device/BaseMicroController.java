@@ -22,7 +22,9 @@ public abstract class BaseMicroController {
     protected boolean hasActiveConnection;
     protected BaseConnection baseConnection;
     protected BaseProgrammingProtocol baseProgrammingProtocol;
-    protected byte[] authenticationToken;
+    protected byte[] authenticationPreSharedToken;
+    protected byte[] authenticationSecretKey;
+    protected byte[] generatedRandomNumber;
     protected int authenticationNumber;
     protected int maximumFirmwareTransferPacketSize;
     protected String deviceName;
@@ -57,15 +59,21 @@ public abstract class BaseMicroController {
         this.authenticationNumber = authenticationNumber;
     }
 
-    public byte[] getAuthenticationToken() {
-        return authenticationToken;
+    public byte[] getAuthenticationPreSharedToken() {
+        return authenticationPreSharedToken;
     }
 
-    public void setAuthenticationToken(byte[] authenticationToken) {
-        this.authenticationToken = authenticationToken;
+    public void setAuthenticationPreSharedToken(byte[] authenticationToken) {
+        this.authenticationPreSharedToken = authenticationToken;
     }
 
+    public byte[] getGeneratedRandomNumber() {
+        return generatedRandomNumber;
+    }
 
+    public void setGeneratedRandomNumber(byte[] generatedRandomNumber) {
+        this.generatedRandomNumber = generatedRandomNumber;
+    }
 
     public BaseProgrammingProtocol getBaseProgrammingProtocol() {
         return baseProgrammingProtocol;
@@ -101,6 +109,14 @@ public abstract class BaseMicroController {
         this.deviceName = deviceName;
     }
 
+    public byte[] getAuthenticationSecretKey() {
+        return authenticationSecretKey;
+    }
+
+    public void setAuthenticationSecretKey(byte[] authenticationSecretKey) {
+        this.authenticationSecretKey = authenticationSecretKey;
+    }
+
     public boolean isHasActiveConnection() {return hasActiveConnection;}
     public void setHasActiveConnection(boolean hasActiveConnection) {this.hasActiveConnection = hasActiveConnection;}
     public abstract ProgrammingResult sendFirmware();
@@ -113,7 +129,7 @@ public abstract class BaseMicroController {
     public BaseMicroController(int maximumPacketSize, int maximumFirmwareTransferPacketSize)
     {
         this.maximumPacketSize = maximumPacketSize;
-        this.authenticationToken = new byte[4];
+        this.authenticationPreSharedToken = new byte[4];
         this.maximumFirmwareTransferPacketSize = maximumFirmwareTransferPacketSize;
 
 

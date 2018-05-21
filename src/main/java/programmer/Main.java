@@ -11,7 +11,10 @@ import java.util.Random;
 public class Main {
 //    static Logger LOGGER = LogManager.getLogger(Main.class.getName());
 
-    byte[] authenticationToken = new byte[] {0x53, (byte)0xef, 0x34,0x23};
+    byte[] authenticationPreSharedToken = new byte[] {0x53, (byte)0xef, 0x34,0x23};
+    byte[] authenticationSecretKey = new byte[] {0x45, (byte)0xaf, 0x32,0x21};
+
+
     Random random = new Random();
     private void getMenu()
     {
@@ -31,8 +34,8 @@ public class Main {
         atmelMicroController.setAuthenticated(false);
         atmelMicroController.setDeviceName(deviceName);
         atmelMicroController.setAuthenticationNumber(random.nextInt(16777215));
-
-        atmelMicroController.setAuthenticationToken(authenticationToken);
+        atmelMicroController.setAuthenticationSecretKey(authenticationSecretKey);
+        atmelMicroController.setAuthenticationPreSharedToken(authenticationPreSharedToken);
         WiFiConnection wiFiConnection = new WiFiConnection(atmelMicroController);
         wiFiConnection.setIPAdress("");
         atmelMicroController.setBaseConnection(wiFiConnection);
@@ -49,10 +52,10 @@ public class Main {
 //        main.addDevice("A421","10.109.137.121",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A422","10.109.79.221",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A423","10.109.60.29",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
-//        main.addDevice("A424","10.109.105.8",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
+        main.addDevice("A424","10.109.247.39",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A425","10.109.140.14",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A426","10.109.212.242",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
-        main.addDevice("A427","10.109.189.0",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
+//        main.addDevice("A427","10.109.189.0",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A428","10.109.217.208",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A429","10.109.108.209",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
 //        main.addDevice("A431","10.109.91.61",SOTAGlobals.OTA_MODE.FULL_CONFIDENTIALITY_WITH_DEFAULT_INTEGRITY,SOTAGlobals.AUTH_MODE.ON,"/Blink.ino.hex");
